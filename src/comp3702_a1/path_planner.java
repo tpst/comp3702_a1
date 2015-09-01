@@ -10,10 +10,14 @@ import problem.*;
 
 public class path_planner {
 	
+	Tree tree;
+	ProblemSpec problem;
+	
 	public static void main(String[] args) {
 		
 		
 		ProblemSpec problem = new ProblemSpec();
+		
 		
 		try {
 			problem.loadProblem(args[0]);
