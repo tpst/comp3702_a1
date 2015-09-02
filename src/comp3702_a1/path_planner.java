@@ -65,9 +65,7 @@ public class path_planner {
 		for(int i = 0; i < numSamples; i++) {
 			// get a random coordinate
 			ArmConfig sample = new ArmConfig(getNewSampleBase());
-			
-			System.out.println(obstacles.size());
-			
+
 			// check if the sample lies within an obstacle							
 			if(!tests.hasCollision(sample, obstacles)) {
 					
@@ -77,7 +75,7 @@ public class path_planner {
 				TreeNode parent = tree.nearestNeighbour(sample);
 				
 				// Check No Collision 
-				if(tests.pathCollision(parent.getConfig(), sample, obstacles)) {
+				if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
 					//No Collision add to tree
 					new TreeNode(tree, parent, sample);
 					
@@ -88,9 +86,10 @@ public class path_planner {
 					
 					System.out.println("Added New Node");
 				}			
+			} else {
+				System.out.println("Collision Detected");
 			}
-			System.out.println("Collision Detected");
-			}
+		}
 					
 			
 			
