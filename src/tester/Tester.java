@@ -448,6 +448,29 @@ public class Tester {
 	}
 	
 	/**
+	 * Returns whether the base position path between two configurations collides with a given obstacle
+	 * 
+	 * @param cfg1, cgf2
+	 *            the two configurations to test path between.
+	 * @param obstacles
+	 *            the obstacles to test against.
+	 * @return whether the path between cfg1 & cfg2 (bases) collides with the obstacle o 
+	 * 
+	 */
+	public boolean pathCollision(ArmConfig cfg1, ArmConfig cfg2, List<Obstacle> obstacles) {
+		
+		Line2D path = new Line2D.Double(cfg1.getBase(), cfg2.getBase());
+		
+		for (Obstacle o : obstacles) {
+			Rectangle2D lenientRect = grow(o.getRect(), -maxError);
+			if (path.intersects(lenientRect)) {
+				return true;
+			}
+		}
+		return false;	
+	}
+	
+	/**
 	 * Runs a specific test based on its name.
 	 */
 	public boolean testByName(String testName, int testNo, boolean verbose) {

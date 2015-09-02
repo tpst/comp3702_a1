@@ -3,6 +3,8 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import problem.ArmConfig;
+
 
 public class Tree {
 	
@@ -13,6 +15,12 @@ public class Tree {
 		
 	}
 	
+	/**
+	 * Adds a tree Node to the tree
+	 * 
+	 * @param node 
+	 * 		node to add to tree
+	 */
 	public void addNode(TreeNode node) {
 		tree.add(node);
 	}
@@ -20,11 +28,11 @@ public class Tree {
 	/*
 	 * Return nearest neighbour node currently in tree to the given node
 	 */
-	public TreeNode nearestNeighbour(TreeNode node) {
+	public TreeNode nearestNeighbour(ArmConfig cfg) {
 		
-		Point2D point = node.getConfig().getBase();
+		Point2D point = cfg.getBase();
 		double nbDistSq, distSq;
-		TreeNode checkNode, nbNode;
+		TreeNode checkNode, nbNode = null;
 		
 		
 		nbDistSq = Double.POSITIVE_INFINITY;
@@ -43,9 +51,7 @@ public class Tree {
 			}
 			
 		}
-		
 
-		
 		//return that neighbour
 		return nbNode;
 		
