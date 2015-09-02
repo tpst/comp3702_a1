@@ -45,8 +45,7 @@ public class path_planner {
 		}
 		*/
 		
-		
-		//ATTEMPT TO CHANGE FOR GIT UPLOAD
+
 	}
 	
 	public static void RRTLoop(ProblemSpec problem) {
@@ -65,7 +64,9 @@ public class path_planner {
 		
 		for(int i = 0; i < numSamples; i++) {
 			// get a random coordinate
-			ArmConfig sample = new ArmConfig(getNewSampleBase(), null);
+			ArmConfig sample = new ArmConfig(getNewSampleBase());
+			
+			System.out.println(obstacles.size());
 			
 			// check if the sample lies within an obstacle							
 			if(!tests.hasCollision(sample, obstacles)) {

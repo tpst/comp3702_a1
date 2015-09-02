@@ -36,6 +36,16 @@ public class ArmConfig {
 		generateLinks();
 	}
 	
+	/**
+	 * Constructor
+	 * @param base
+	 * 			Base coordinates (Point2D)
+	 */
+	public ArmConfig(Point2D base) {
+		this.base = new Point2D.Double(base.getX(), base.getY());
+	}
+	
+	
 	/** 
 	 * Constructs an ArmConfig from a space-separated string. The first two
 	 * numbers are the x and y coordinates of the robot's base. The subsequent
