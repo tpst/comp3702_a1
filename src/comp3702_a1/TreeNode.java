@@ -36,9 +36,9 @@ public class TreeNode {
 	 * Return the path from end point to root (or start point) - highest parent
 	 * note parent of root is NULL
 	 */
-	public ArrayList<TreeNode> getPath() {
+	public List<TreeNode> getReverseNodePath() {
 		
-		ArrayList<TreeNode> path = new ArrayList<TreeNode>();
+		List<TreeNode> path = new ArrayList<TreeNode>();
 		//Get parent
 		TreeNode lastParent = parent;
 		path.add(lastParent);
@@ -53,5 +53,22 @@ public class TreeNode {
 		return path;
 		
 	}
+	
+	/**
+	 * Returns path from intial state to current state
+	 * 
+	 * @return path as a list of ArmConfigurations
+	 */
+	public List<ArmConfig> getPath() {
+		
+		List<TreeNode> reversePath = getReverseNodePath();
+		List<ArmConfig> path = new ArrayList<ArmConfig>();
+		
+		for (int i = reversePath.size() - 2; i >= 0; i--) {
+			path.add(reversePath.get(i).getConfig());
+		}
+		return path;
+	}
+
 
 }

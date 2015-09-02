@@ -200,6 +200,24 @@ public class ArmConfig {
 	}
 	
 	/**
+	 * Add an a base increment to the ArmConfig
+	 * @param x
+	 * 		x increment
+	 * @param y
+	 * 		y increment
+	 * @return
+	 * 		New ArmConfig
+	 */
+	public ArmConfig addBaseIncrement(double x, double y) {
+		
+		ArmConfig cfg = this;		
+		cfg.base = new Point2D.Double(this.getBase().getX() + x, this.getBase().getY() + y);
+		
+		return cfg;
+		
+	}
+	
+	/**
 	 * Generates links from joint angles
 	 */
 	private void generateLinks() {
@@ -216,4 +234,5 @@ public class ArmConfig {
 			y1 = y2;
 		}
 	}
+	
 }
