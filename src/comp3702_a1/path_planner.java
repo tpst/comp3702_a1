@@ -30,13 +30,12 @@ public class path_planner {
 			e.printStackTrace();
 		}
 		
-		System.out.println(problem.getObstacles());
 		//construct new empty search tree using root node
 		
 		// do rrt while we have not found goal
 		RRTLoop(problem);
 		
-		//Smooth Path - create shorcuts between nodes if possible
+		//Smooth Path - create shortcuts between nodes if possible
 //		smoothPath(problem);
 		
 		//Now have Path from initial to Goal 
@@ -52,19 +51,18 @@ public class path_planner {
 			e.printStackTrace();
 		}
 		
-		smoothPath(problem);
-		
-		try {
-			problem.saveSolution("/home/ryan/Documents/COMP3702/outFiles/sol-0_joints_obs_smooth.txt");
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
-		
-		
+		System.out.println("Challenge Complete");
 	}
 	
+	
+	/**
+	 * Rapidly Exploring Random Tree
+	 * 
+	 * Finds a path between initial and goal state
+	 * 
+	 * @param problem
+	 * 		Problem Spec object containing problem
+	 */
 	public static void RRTLoop(ProblemSpec problem) {
 		boolean completedPath = false; //has a complete path been found
 		int numSamples = 10;
@@ -75,12 +73,7 @@ public class path_planner {
 		
 		//Add initial config to tree
 		new TreeNode(tree, null, problem.getInitialState());
-		
-		//For Drawing the  tree
-		Graphics2D graphics = null;
-		
-		List<Double> jointAngles = new ArrayList<Double>();	//starting jointAngled -------- currently no joints
-		
+			
 		while(!completedPath){
 			
 			//Try Connect Goal State 
@@ -97,12 +90,12 @@ public class path_planner {
 				
 				completedPath = true;	
 				System.out.println("Goal State Connected");
+				break;
 			}
 			
 			for(int i = 0; i < numSamples; i++) {
 				// get a random coordinate
-				ArmConfig sample = new ArmConfig(getNewSampleBase(), jointAngles);
-						
+				ArmConfig sample = getNewSampleConfig(problem.getJointCount());					
 
 				// check if the sample lies within an obstacle							
 				if(!tests.hasCollision(sample, obstacles)) {
@@ -115,12 +108,7 @@ public class path_planner {
 					// Check No Collision 
 					if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
 						//No Collision add to tree
-						new TreeNode(tree, parent, sample);
-						
-						//Draw on tree																VISUALISATION					
-						Line2D line = new Line2D.Double(parent.getConfig().getBase(), sample.getBase());
-//						graphics.draw(line);
-						
+						new TreeNode(tree, parent, sample);						
 						System.out.println("Added New Node");
 					}			
 				} else {
@@ -139,6 +127,25 @@ public class path_planner {
 		Double randomy = Math.random();
 		
 		return new Point2D.Double(randomx, randomy);
+	}
+	
+	/**
+	 * Return a new sample arm configuration
+	 * @param numJoints
+	 * 		Number of joints required
+	 * @return
+	 * 		Randomly Sampled Arm Config
+	 */
+	public static ArmConfig getNewSampleConfig(int numJoints) {
+		
+		Point2D base = getNewSampleBase();
+		List<Double> joints = new ArrayList<Double>();
+		
+		for (int i = 0; i < numJoints; i ++) {
+			joints.add(Math.random()*300 - 150);
+		}
+		
+		return new ArmConfig(base, joints);	
 	}
 	
 	/**
