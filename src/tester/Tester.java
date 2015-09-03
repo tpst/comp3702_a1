@@ -28,7 +28,7 @@ public class Tester {
 	public static final double DEFAULT_MAX_ERROR = 1e-5;
 	
 	/** Remembers the specifications of the problem. */
-	private ProblemSpec ps = new ProblemSpec();
+	public ProblemSpec ps = new ProblemSpec();
 	/** The maximum error allowed by this Tester */
 	private double maxError;
 	/** The workspace bounds, with allowable error. */

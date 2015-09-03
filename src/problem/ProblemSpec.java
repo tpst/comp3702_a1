@@ -158,9 +158,11 @@ public class ProblemSpec {
 		}
 		String ls = System.getProperty("line.separator");
 		FileWriter output = new FileWriter(filename);
-		output.write(String.format("%d %f%s", path.size() - 1, ls));
+		
+		output.write(path.size() -1 + ls);
+//		output.write(String.format("%d %f%s", path.size() - 1, ls));
 		for (ArmConfig cfg : path) {
-			output.write(cfg + ls);
+			output.write(cfg.toString() + ls);
 		}
 		output.close();
 	}

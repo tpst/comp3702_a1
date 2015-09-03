@@ -40,7 +40,7 @@ public class TreeNode {
 		
 		List<TreeNode> path = new ArrayList<TreeNode>();
 		//Get parent
-		TreeNode lastParent = parent;
+		TreeNode lastParent = this;
 		path.add(lastParent);
 		
 		while (lastParent != null) {

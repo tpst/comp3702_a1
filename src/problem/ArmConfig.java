@@ -7,6 +7,7 @@ import java.util.InputMismatchException;
 import java.util.List;
 import java.util.Scanner;
 
+
 /** 
  * Represents a configuration of the arm, i.e. base x-y coordinates and joint
  * angles. This class doesn't do any validity checking.
@@ -36,15 +37,7 @@ public class ArmConfig {
 		generateLinks();
 	}
 	
-	/**
-	 * Constructor
-	 * @param base
-	 * 			Base coordinates (Point2D)
-	 */
-	public ArmConfig(Point2D base) {
-		this.base = new Point2D.Double(base.getX(), base.getY());
-	}
-	
+
 	
 	/** 
 	 * Constructs an ArmConfig from a space-separated string. The first two
@@ -87,6 +80,7 @@ public class ArmConfig {
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		sb.append(base.getX());
+		sb.append(" ");
 		sb.append(base.getY());
 		for (Double angle : jointAngles) {
 			sb.append(" ");
@@ -208,12 +202,9 @@ public class ArmConfig {
 	 * @return
 	 * 		New ArmConfig
 	 */
-	public ArmConfig addBaseIncrement(double x, double y) {
+	public void addBaseIncrement(double x, double y) {
 		
-		ArmConfig cfg = this;		
-		cfg.base = new Point2D.Double(this.getBase().getX() + x, this.getBase().getY() + y);
-		
-		return cfg;
+		this.base = new Point2D.Double(this.getBase().getX() + x, this.getBase().getY() + y);
 		
 	}
 	
