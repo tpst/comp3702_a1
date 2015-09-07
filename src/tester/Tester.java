@@ -184,12 +184,23 @@ public class Tester {
 	 */
 	public boolean isValidConfig(ArmConfig cfg) {
 		
-		//Test Bounds, self collision & obstacle collision
-		if (fitsBounds(cfg) && !hasSelfCollision(cfg) && !hasCollision(cfg, ps.getObstacles())) {
-			return true;
+//		//Test Bounds, self collision & obstacle collision
+//		if (fitsBounds(cfg) && !hasSelfCollision(cfg) && !hasCollision(cfg, ps.getObstacles())) {
+//			return true;
+//		}
+		if(!fitsBounds(cfg)) {
+			System.out.println("Invalid Config - out of bounds");
+			return false;
+		} else if(hasSelfCollision(cfg)) {
+			System.out.println("Invalid Config - Self Collision");
+			return false;
+		} else if(hasCollision(cfg, ps.getObstacles())) {
+			System.out.println("Invalid Config - Collision");
+			return false;
 		}
-
-		return false;
+		return true;
+		
+//		return false;
 	}
 	
 	/**

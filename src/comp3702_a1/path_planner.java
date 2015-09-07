@@ -3,6 +3,7 @@ package comp3702_a1;
 import java.awt.Graphics2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,15 +36,18 @@ public class path_planner {
 		// do rrt while we have not found goal
 		RRTLoop(problem);
 		
-		//Smooth Path - create shortcuts between nodes if possible
-//		smoothPath(problem);
+//		//Smooth Path - create shortcuts between nodes if possible
+//		if(problem.getPath().size() > 3) {
+//			smoothPath(problem);
+//		}
+
 		
 		//Now have Path from initial to Goal 
 		// Need to Break Path down to appropriate step sizes
 		//completePath(problem);
 		
 		System.out.println("Completing Path - Interpolation");
-		correctPath(problem);
+//		correctPath(problem);
 		  
 		//Output 
 		try {
@@ -67,14 +71,19 @@ public class path_planner {
 	 */
 	public static void RRTLoop(ProblemSpec problem) {
 		boolean completedPath = false; //has a complete path been found
-		int numSamples = 100;
+		int numSamples = 1;
+		double sqrSideLen = 0.25;
 		List<Obstacle> obstacles = problem.getObstacles();
 		
 		Tester tests = new Tester();
 		tests.ps = problem;
 		Tree tree = new Tree();
 		
+		//initial state base
+		Point2D initBase = problem.getInitialState().getBase();
+		
 		System.out.println("Finding Tree");
+		
 		
 		//Add initial config to tree
 		new TreeNode(tree, null, problem.getInitialState());
@@ -106,23 +115,58 @@ public class path_planner {
 				break;
 			}
 			
-			for(int i = 0; i < numSamples; i++) {
-				// get a random coordinate
-				ArmConfig sample = getValidSampleCfg(tests);					
-
-				//nearest Node in Tree to sample
-				parent = tree.nearestNeighbour(sample);
+			for(int k = 1; k <= 1/sqrSideLen; k ++) {
+				//increment a bounding box to sample configs
+				Rectangle2D bounds = getBoundingRect(initBase, sqrSideLen*k);
+				Point2D sampBase = getNewSampleBase(bounds);
 				
-				// Check No Collision 
-				if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
-					//No Collision add to tree
-					new TreeNode(tree, parent, sample);						
-					System.out.println("Added New Node");
-				}			
+				for(int i = 0; i < numSamples; i++) {
+					// get a random coordinate
+					ArmConfig sample = getValidSampleCfg(tests, sampBase);					
+	
+					//nearest Node in Tree to sample
+					parent = tree.nearestNeighbour(sample);
+					
+					// Check No Collision 
+					if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
+						//No Collision add to tree
+						new TreeNode(tree, parent, sample);						
+						System.out.println("Added New Node");
+					}			
+				}
 			}
 		}
 	}
 	
+	
+	/**
+	 * Return a bounding square that is constrained within workspace
+	 * @param center
+	 * 		center of square
+	 * @param sLength
+	 * 		side length
+	 * @return
+	 * 		square
+	 */
+	public static Rectangle2D getBoundingRect(Point2D center, double sLength) {
+		double cX = center.getX();
+		double cY = center.getY();
+		
+		//corner values
+		double x_left = cX - sLength/2;
+		double x_right = cX + sLength/2;
+		double y_bot = cY - sLength/2;
+		double y_top = cY + sLength/2;
+		
+		//Can't be be outside workspace (0,0) to (1,1) diagonal of rect
+		if (x_left < 0) x_left = 0;
+		if(x_right > 1) x_right = 1;
+		if(y_bot < 0) y_bot =0;
+		if(y_top > 1) y_top = 1;
+		
+		return new Rectangle2D.Double(x_left, y_top, x_right-x_left, y_top-y_bot);
+	
+	}
 	/*
 	 * Returns a randomly chosen x,y position between
 	 * 0 and 1. 
@@ -130,6 +174,18 @@ public class path_planner {
 	public static Point2D getNewSampleBase() {
 		Double randomx = Math.random();
 		Double randomy = Math.random();
+		
+		return new Point2D.Double(randomx, randomy);
+	}
+	
+	/*
+	 * Returns a randomly chosen x,y position between
+	 * the rectangle bounds
+	 */
+	public static Point2D getNewSampleBase(Rectangle2D bounds) {
+
+		Double randomx = Math.random()*bounds.getWidth() + bounds.getMinX();
+		Double randomy = Math.random()*bounds.getHeight() + bounds.getMinY();
 		
 		return new Point2D.Double(randomx, randomy);
 	}
@@ -144,14 +200,18 @@ public class path_planner {
 	public static ArmConfig getSampleConfig(int numJoints) {
 		
 		Point2D base = getNewSampleBase();
+		
 		List<Double> joints = new ArrayList<Double>();
+		Tester test = new Tester();
+		double maxJointAng = test.MAX_JOINT_ANGLE;
 		
 		for (int i = 0; i < numJoints; i ++) {
-			joints.add(Math.random()*300 - 150);
+			joints.add(Math.random()*2*maxJointAng - maxJointAng);
 		}
 		
 		return new ArmConfig(base, joints);	
 	}
+
 	/**
 	 * Return a new sample arm configuration
 	 * @param numJoints
@@ -164,9 +224,11 @@ public class path_planner {
 	public static ArmConfig getSampleConfig(int numJoints, Point2D base) {
 		
 		List<Double> joints = new ArrayList<Double>();
+		Tester test = new Tester();
+		double maxJointAng = test.MAX_JOINT_ANGLE;
 		
 		for (int i = 0; i < numJoints; i ++) {
-			joints.add(Math.random()*300 - 150);
+			joints.add(Math.random()*2*maxJointAng - maxJointAng);
 		}
 		
 		return new ArmConfig(base, joints);	
@@ -267,9 +329,7 @@ public class path_planner {
 		ArrayList<ArmConfig> path = (ArrayList<ArmConfig>)problem.getPath();
 		Tester tests = new Tester();
 		tests.ps = problem;
-		
-		
-		
+
 		List<Integer> badSteps = tests.getInvalidSteps();
 		while(badSteps.size()>0) {
 			
@@ -284,51 +344,29 @@ public class path_planner {
 				ArmConfig cfg2 = path.get(i+1 + addIdx);
 							
 				double dist = cfg1.getBase().distance(cfg2.getBase());
-				int numSteps = (int) Math.ceil(dist/0.001);	//number of steps required between cfg1 & cfg2
-	
+				ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
+				
+				//number of steps required
+//				int numSteps = getNumSteps(dist, jointAngleDifferences, tests);
+				int numSteps = 2;
+				
 				//step distance
 				double dx = (cfg2.getBase().getX() - cfg1.getBase().getX())/numSteps;
 				double dy = (cfg2.getBase().getY() - cfg1.getBase().getY())/numSteps;
-				ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
+				ArrayList<Double> jointIncs = calcJointStep (jointAngleDifferences, numSteps);
+				
 			
-//				for(int j = 1; j < numSteps; j++) {
-//					ArrayList<Double> jointAngles = new ArrayList<Double>();
-//					Double bx = cfg1.getBase().getX() + j*dx;
-//					Double by = cfg1.getBase().getY() + j*dy;
-//					Double factor = (double)j/numSteps;												//I THINK THIS IS WRONG
-//					// add the correct step amount to base
-////					bx += factor*dx;
-////					by += factor*dy;
-//					
-//
-//					
-//					// do the same for joints
-//					for(int k = 0; k < jointAngleDifferences.size(); k++) {
-//						jointAngles.add(cfg1.getJointAngles().get(k) + factor*jointAngleDifferences.get(k));
-//					}
-//					
-//
-//					//Create new config 
-//					Point2D base = new Point2D.Double(bx,by);
-//					ArmConfig cfgNew = new ArmConfig(base, jointAngles);
-//					//Check it is valid
-//					if(!tests.isValidConfig(cfgNew)) {
-//						//not valid get a valid config
-//						cfgNew = getPathConfig(base, path.get(addIdx+j-1), tests);
-//					}
-//					path.add(addIdx+j, cfgNew);
-//				}			
-//				addIdx +=numSteps-1;	//Increase the Idex Counter
-//				}
-//			//update path
-//			problem.setPath(path);
-//			
-//			
-//			
+		
 			for (int j = 1; j < numSteps; j ++) {	
 			ArmConfig newCfg = new ArmConfig(path.get(addIdx+i+j-1));
-//			newCfg.addBaseIncrement(dx, dy);
 			newCfg.addIncrement(dx, dy, jointIncs);
+			
+			//check cfg is valid
+			if(!tests.isValidConfig(newCfg)) {
+//				System.out.println("Config not valid");
+				//not valid get a valid config
+				newCfg = getPathConfig(newCfg.getBase(), path.get(addIdx+j-1), tests);
+			}
 			path.add(addIdx+i+j, newCfg);
 		}
 		
@@ -338,6 +376,33 @@ public class path_planner {
 			//update badSteps
 			badSteps = tests.getInvalidSteps();
 		}		
+			System.out.print("BadSteps: ");
+			System.out.println(badSteps.size());
+			
+	}
+	
+	/**
+	 * get the number of steps required to linearly move from one config to another
+	 * within the specifications (0.001 for base and 0.1 for angles)
+	 * @param baseDist
+	 * 			Distance between base points
+	 * @param jointDiff
+	 * 		 	distance between corresponding joints
+	 * @return
+	 * 			the required steps (ie max number of steps)
+	 */
+	public static int getNumSteps(double baseDist, ArrayList<Double> jointDiff, Tester tests) {
+		
+		int numSteps = (int) Math.ceil(baseDist/tests.MAX_BASE_STEP);
+		int tmpNumSteps = 0;
+		
+		for(double j : jointDiff){
+			tmpNumSteps = (int) Math.ceil(Math.abs(j)/tests.MAX_JOINT_STEP);
+			if(tmpNumSteps > numSteps) {
+				numSteps = tmpNumSteps;
+			}
+		}
+		return numSteps;
 	}
 	
 	/**
@@ -354,18 +419,25 @@ public class path_planner {
 		int numJoints = tests.ps.getJointCount();
 			
 		//sample configs
-		while(samples.size() == 0){
-			//repeat untill have atleast one valid config
-			for(int i = 0; i < numSamples; i ++) {
-				//get valid sample
-				ArmConfig cfg = getSampleConfig(numJoints, base);
-				if (tests.isValidConfig(cfg)) {
-					samples.add(cfg);
-				} else {
-					System.out.println("Invalid Sample - fixed base");
-				}
+		for(int i = 0; i < numSamples; i ++) {
+			//get valid sample
+			ArmConfig cfg = getSampleConfig(numJoints, base);
+			if (tests.isValidConfig(cfg)) {
+				samples.add(cfg);
+//			} else {
+//				System.out.println("Invalid Sample - fixed base");
 			}
 		}
+			
+		while(samples.size() == 0){
+			//repeat untill have atleast one valid config
+			ArmConfig cfg = getSampleConfig(numJoints, base);
+			if (tests.isValidConfig(cfg)) {
+				samples.add(cfg);
+			}
+		}
+		
+		
 		if (samples.size() > 1) {
 			return chooseBestCfg(prevCfg, samples);
 		} else {
@@ -416,13 +488,28 @@ public class path_planner {
 	
 		for(int i = 0; i < jointAngles1.size(); i++) {
 			double angle = jointAngles2.get(i)-jointAngles1.get(i);
-			if (Math.abs(angle) < 0.1) {
-				angle = 0;
-			}
 			deltaJoints.add(angle);
 		}
 		
 		return deltaJoints;
+	}
+	/**
+	 * Calculate the distance for each joint to step
+	 * @param angDist
+	 * 		distance between 2 configurations
+	 * @param numSteps
+	 * 		number of steps between the 2 configurations
+	 * @return
+	 * 		a list of the joint step sizes
+	 */
+	public static ArrayList<Double> calcJointStep (ArrayList<Double> angDist, int numSteps) {
+		
+		ArrayList<Double> angleSteps = new ArrayList<Double>();
+		
+		for(Double dist : angDist) {
+			angleSteps.add(dist/numSteps);
+		}
+		return angleSteps;
 	}
 	
 	
