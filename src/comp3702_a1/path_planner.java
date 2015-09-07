@@ -148,6 +148,25 @@ public class path_planner {
 		
 		return new ArmConfig(base, joints);	
 	}
+	/**
+	 * Return a new sample arm configuration
+	 * @param numJoints
+	 * 		Number of joints required
+	 * @param base
+	 * 		base point
+	 * @return
+	 * 		Randomly Sampled Arm Config
+	 */
+	public static ArmConfig getNewSampleConfig(int numJoints, Point2D base) {
+		
+		List<Double> joints = new ArrayList<Double>();
+		
+		for (int i = 0; i < numJoints; i ++) {
+			joints.add(Math.random()*300 - 150);
+		}
+		
+		return new ArmConfig(base, joints);	
+	}
 	
 	/**
 	 * Smooth the given path to remove non essential nodes
@@ -202,48 +221,99 @@ public class path_planner {
 		Tester tests = new Tester();
 		tests.ps = problem;
 		
-		List<Integer> badSteps = tests.getInvalidSteps();
-
-		for (Integer i : badSteps) {
-			System.out.println(i);
-			
-			ArmConfig cfg1 = path.get(i);
-			ArmConfig cfg2 = path.get(i+1);
-						
-			double dist = cfg1.getBase().distance(cfg2.getBase());
-			int numSteps = (int) Math.ceil(dist/0.001);	//number of steps required between cfg1 & cfg2
-
-			//step distance
-			double dx = (cfg2.getBase().getX() - cfg1.getBase().getX());
-			double dy = (cfg2.getBase().getY() - cfg1.getBase().getY());
-			System.out.println(dx);
-			ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
+		int addIdx = 0;
 		
-			for(int j = 1; j < numSteps; j++) {
-				ArrayList<Double> jointAngles = new ArrayList<Double>();
-				Double bx = cfg1.getBase().getX();
-				Double by = cfg1.getBase().getY();
-				Double factor = (double)j/numSteps;
-				// add the correct step amount to base
-				bx += factor*dx;
-				by += factor*dy;
+		List<Integer> badSteps = tests.getInvalidSteps();
+		while(badSteps.size()>0) {
+			
+		
+	
+			for (Integer i : badSteps) {
+				System.out.println(i + addIdx);
 				
-				System.out.print(bx);
-				System.out.print(" , ");
-				System.out.println(by);
-				// do the same for joints
-				for(int k = 0; k < jointAngleDifferences.size(); k++) {
-					jointAngles.add(cfg1.getJointAngles().get(k) + factor*jointAngleDifferences.get(k));
+				ArmConfig cfg1 = path.get(i + addIdx);
+				ArmConfig cfg2 = path.get(i+1 + addIdx);
+							
+				double dist = cfg1.getBase().distance(cfg2.getBase());
+				int numSteps = (int) Math.ceil(dist/0.001);	//number of steps required between cfg1 & cfg2
+	
+				//step distance
+				double dx = (cfg2.getBase().getX() - cfg1.getBase().getX());
+				double dy = (cfg2.getBase().getY() - cfg1.getBase().getY());
+				System.out.println(dx);
+				ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
+			
+				for(int j = 1; j < numSteps; j++) {
+					ArrayList<Double> jointAngles = new ArrayList<Double>();
+					Double bx = cfg1.getBase().getX();
+					Double by = cfg1.getBase().getY();
+					Double factor = (double)j/numSteps;
+					// add the correct step amount to base
+					bx += factor*dx;
+					by += factor*dy;
+					
+					System.out.print(bx);
+					System.out.print(" , ");
+					System.out.println(by);
+					// do the same for joints
+					for(int k = 0; k < jointAngleDifferences.size(); k++) {
+						jointAngles.add(cfg1.getJointAngles().get(k) + factor*jointAngleDifferences.get(k));
+					}
+					
+					for(Double d : jointAngles) {
+						System.out.println(d);
+					}
+					
+					//Create new config 
+					Point2D base = new Point2D.Double(bx,by);
+					ArmConfig cfgNew = new ArmConfig(base, jointAngles);
+					//Check it is valid
+					valid = 							//TODO
+					if(!valid) {
+						//not valid get a valid config
+						cfgNew = getPathConfig(base, path.get(addIdx+j-1));
+					}
+					path.add(addIdx+j, cfgNew);
+					
+					
 				}
 				
-				for(Double d : jointAngles) {
-					System.out.println(d);
+				addIdx +=numSteps-1;	//Increase the Idex Counter
+	
+	
 				}
-			}
-
+			//update badSteps
+			badSteps = tests.getInvalidSteps();
+		}
+		problem.setPath(path);		
+	}
+	
+	/**
+	 * returns a Arm configuration which is valid and close to the previous config on 
+	 * the path. To be used when a path config is invalid but the base is known  
+	 * @param base
+	 * 				base point of robot
+	 * @return
+	 * 			A valid and good configuration at the given base
+	 */
+	public static ArmConfig getPathConfig(Point2D base, ArmConfig prevCfg) {
+		List<ArmConfig> samples = new ArrayList<ArmConfig>;
+		int numSamples = 10;
+		
+		Tester tests = new Tester();
+		tests.ps = problem;
+		
+		//sample configs
+		for(int i = 0; i < numSamples; i ++) {
+			
+			
+			//get valid samples
 			
 		}
+		
+		return chooseBestCfg(prevCfg, samples);
 	}
+
 	
 	/*
 	 * Takes two configurations and calculates the difference between joint angles
@@ -299,10 +369,7 @@ public class path_planner {
 			}
 			
 			addIdx +=numSteps-1;	//Increase the Idex Counter
-
 		}
 		problem.setPath(path);
-	}
-	
-	
+	}	
 }
