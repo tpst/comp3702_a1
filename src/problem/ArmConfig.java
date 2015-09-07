@@ -209,6 +209,38 @@ public class ArmConfig {
 	}
 	
 	/**
+	 * Increment current joint angles by given joint increments
+	 * @param jointIncs
+	 * 			list of joint increments 
+	 */
+	public void addJointIncrement(List<Double> jointIncs) {
+		
+		List<Double> jointAngs = new ArrayList<Double>();
+		
+		
+		for (int i = 0; i <this.getJointCount(); i ++) {
+			jointAngs.add(this.jointAngles.get(i) + jointIncs.get(i));
+		}
+		
+		this.jointAngles = new ArrayList<Double>(jointAngs);
+		generateLinks();
+	}
+	
+	/**
+	 * Increment Configuration by givn increments
+	 * @param x
+	 * 		increment for base x value
+	 * @param y
+	 * 		increment for base y value
+	 * @param jointIncs
+	 * 		increment for joint angles
+	 */
+	public void addIncrement(double x, double y, List<Double> jointIncs) {
+		addBaseIncrement(x,y);
+		addJointIncrement(jointIncs);
+	}
+	
+	/**
 	 * Generates links from joint angles
 	 */
 	private void generateLinks() {
