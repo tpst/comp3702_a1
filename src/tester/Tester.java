@@ -176,6 +176,23 @@ public class Tester {
 	}
 	
 	/**
+	 * Returns whether the ArmConfig is valid
+	 * 
+	 * @param cfg
+	 * 			 A configuration
+	 * @return whether the configuration is valid 
+	 */
+	public boolean isValidConfig(ArmConfig cfg) {
+		
+		//Test Bounds, self collision & obstacle collision
+		if (fitsBounds(cfg) && !hasSelfCollision(cfg) && !hasCollision(cfg, ps.getObstacles())) {
+			return true;
+		}
+
+		return false;
+	}
+	
+	/**
 	 * Returns whether the step from s0 to s1 is a valid primitive step.
 	 *
 	 * @param cfg0
