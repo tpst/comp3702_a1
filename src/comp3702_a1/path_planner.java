@@ -36,16 +36,17 @@ public class path_planner {
 		RRTLoop(problem);
 		
 		//Smooth Path - create shortcuts between nodes if possible
-//		smoothPath(problem);
+		//smoothPath(problem);
 		
 		//Now have Path from initial to Goal 
 		// Need to Break Path down to appropriate step sizes
-//		completePath(problem);
+		//completePath(problem);
 		
-		
+		correctPath(problem);
+		  
 		//Output 
 		try {
-			problem.saveSolution(args[1]);
+			//problem.saveSolution(args[1]);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -177,7 +178,6 @@ public class path_planner {
 					
 					//reduce i so we attempt to increase shortcut
 					i --;
-					
 					//will keep on updating until it stops smoothing
 					updating = true;
 				}
@@ -192,6 +192,75 @@ public class path_planner {
 		System.out.print(" Nodes from path\n");
 		
 	}
+	
+	/*
+	 * Takes the current solution path and corrects it such that base movement is <= 0.001 per step, 
+	 * and max joint rotation is <= 0.1 degrees.
+	 */
+	public static void correctPath(ProblemSpec problem) {
+		ArrayList<ArmConfig> path = (ArrayList<ArmConfig>)problem.getPath();
+		Tester tests = new Tester();
+		tests.ps = problem;
+		
+		List<Integer> badSteps = tests.getInvalidSteps();
+
+		for (Integer i : badSteps) {
+			System.out.println(i);
+			
+			ArmConfig cfg1 = path.get(i);
+			ArmConfig cfg2 = path.get(i+1);
+						
+			double dist = cfg1.getBase().distance(cfg2.getBase());
+			int numSteps = (int) Math.ceil(dist/0.001);	//number of steps required between cfg1 & cfg2
+
+			//step distance
+			double dx = (cfg2.getBase().getX() - cfg1.getBase().getX());
+			double dy = (cfg2.getBase().getY() - cfg1.getBase().getY());
+			System.out.println(dx);
+			ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
+		
+			for(int j = 1; j < numSteps; j++) {
+				ArrayList<Double> jointAngles = new ArrayList<Double>();
+				Double bx = cfg1.getBase().getX();
+				Double by = cfg1.getBase().getY();
+				Double factor = (double)j/numSteps;
+				// add the correct step amount to base
+				bx += factor*dx;
+				by += factor*dy;
+				
+				System.out.print(bx);
+				System.out.print(" , ");
+				System.out.println(by);
+				// do the same for joints
+				for(int k = 0; k < jointAngleDifferences.size(); k++) {
+					jointAngles.add(cfg1.getJointAngles().get(k) + factor*jointAngleDifferences.get(k));
+				}
+				
+				for(Double d : jointAngles) {
+					System.out.println(d);
+				}
+			}
+
+			
+		}
+	}
+	
+	/*
+	 * Takes two configurations and calculates the difference between joint angles
+	 */
+	public static ArrayList<Double> calcDeltaJoints(ArmConfig cfg1, ArmConfig cfg2) {
+		ArrayList<Double> deltaJoints = new ArrayList<Double>();
+		ArrayList<Double> jointAngles1 = (ArrayList<Double>)cfg1.getJointAngles();
+		ArrayList<Double> jointAngles2 = (ArrayList<Double>)cfg2.getJointAngles();
+	
+		for(int i = 0; i < jointAngles1.size(); i++) {
+			double angle = jointAngles2.get(i)-jointAngles1.get(i);
+			deltaJoints.add(angle);
+		}
+		
+		return deltaJoints;
+	}
+	
 	
 	/**
 	 * Completes the found path by breaking it down into primitive step sizes
