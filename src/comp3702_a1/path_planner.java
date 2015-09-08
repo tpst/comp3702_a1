@@ -44,10 +44,10 @@ public class path_planner {
 		
 		//Now have Path from initial to Goal 
 		// Need to Break Path down to appropriate step sizes
-		//completePath(problem);
+//		completePath(problem);
 		
 		System.out.println("Completing Path - Interpolation");
-//		correctPath(problem);
+		correctPath(problem);
 		  
 		//Output 
 		try {
@@ -71,13 +71,17 @@ public class path_planner {
 	 */
 	public static void RRTLoop(ProblemSpec problem) {
 		boolean completedPath = false; //has a complete path been found
-		int numSamples = 1;
-		double sqrSideLen = 0.25;
+		int numSamples = 100;
+		double sqrSideLen = 0.1;
+		boolean incSample = true;	//increase sampling bounding box
+		Rectangle2D bounds = new Rectangle2D.Double();
+		
 		List<Obstacle> obstacles = problem.getObstacles();
 		
 		Tester tests = new Tester();
 		tests.ps = problem;
 		Tree tree = new Tree();
+		
 		
 		//initial state base
 		Point2D initBase = problem.getInitialState().getBase();
@@ -115,14 +119,19 @@ public class path_planner {
 				break;
 			}
 			
-			for(int k = 1; k <= 1/sqrSideLen; k ++) {
+			for(int k = 1; k <= 2/sqrSideLen; k ++) {
 				//increment a bounding box to sample configs
-				Rectangle2D bounds = getBoundingRect(initBase, sqrSideLen*k);
-				Point2D sampBase = getNewSampleBase(bounds);
-				
-				for(int i = 0; i < numSamples; i++) {
+				if (incSample) {
+					bounds = getBoundingRect(initBase, sqrSideLen*k);
+				} else {
+					//default bounds 
+					bounds = tests.BOUNDS;
+					System.out.println("default bounds");
+				}
+
+				for(int i = 0; i < k*numSamples; i++) {
 					// get a random coordinate
-					ArmConfig sample = getValidSampleCfg(tests, sampBase);					
+					ArmConfig sample = getValidSampleCfg(tests, bounds);					
 	
 					//nearest Node in Tree to sample
 					parent = tree.nearestNeighbour(sample);
@@ -135,6 +144,7 @@ public class path_planner {
 					}			
 				}
 			}
+			incSample = false;
 		}
 	}
 	
@@ -164,7 +174,7 @@ public class path_planner {
 		if(y_bot < 0) y_bot =0;
 		if(y_top > 1) y_top = 1;
 		
-		return new Rectangle2D.Double(x_left, y_top, x_right-x_left, y_top-y_bot);
+		return new Rectangle2D.Double(x_left, y_bot, x_right-x_left, y_top-y_bot);
 	
 	}
 	/*
@@ -183,7 +193,7 @@ public class path_planner {
 	 * the rectangle bounds
 	 */
 	public static Point2D getNewSampleBase(Rectangle2D bounds) {
-
+		
 		Double randomx = Math.random()*bounds.getWidth() + bounds.getMinX();
 		Double randomy = Math.random()*bounds.getHeight() + bounds.getMinY();
 		
@@ -200,6 +210,30 @@ public class path_planner {
 	public static ArmConfig getSampleConfig(int numJoints) {
 		
 		Point2D base = getNewSampleBase();
+		
+		List<Double> joints = new ArrayList<Double>();
+		Tester test = new Tester();
+		double maxJointAng = test.MAX_JOINT_ANGLE;
+		
+		for (int i = 0; i < numJoints; i ++) {
+			joints.add(Math.random()*2*maxJointAng - maxJointAng);
+		}
+		
+		return new ArmConfig(base, joints);	
+	}
+	
+	/**
+	 * Return a new sample arm configuration
+	 * @param numJoints
+	 * 		Number of joints required
+	 * @param bounds
+	 * 		Bounding rectangle to choose base point from 
+	 * @return
+	 * 		Randomly Sampled Arm Config
+	 */
+	public static ArmConfig getSampleConfig(int numJoints, Rectangle2D bounds) {
+		
+		Point2D base = getNewSampleBase(bounds);
 		
 		List<Double> joints = new ArrayList<Double>();
 		Tester test = new Tester();
@@ -248,6 +282,30 @@ public class path_planner {
 		
 		for(;;) {
 			ArmConfig cfg = getSampleConfig(numJoints);
+			
+			if (tests.isValidConfig(cfg)) {
+				return cfg;
+			} else {
+				System.out.println("Invalid Sample");
+			}
+		}	
+	}
+	
+	/**
+	 * Get a Valid sample config
+	 * @param ps
+	 * 		problem specifications
+	 * @param bounds
+	 * 		bounding rectangle to choose base point from
+	 * @return
+	 * 		a valid sample configuration
+	 */
+	public static ArmConfig getValidSampleCfg(Tester tests, Rectangle2D bounds) {
+
+		int numJoints = tests.ps.getJointCount();
+		
+		for(;;) {
+			ArmConfig cfg = getSampleConfig(numJoints, bounds);
 			
 			if (tests.isValidConfig(cfg)) {
 				return cfg;
