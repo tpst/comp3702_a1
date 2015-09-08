@@ -1,6 +1,7 @@
 package tester;
 
 import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -162,6 +163,7 @@ public class Tester {
 	 * @return the preceding path indices of any invalid steps.
 	 */
 	public List<Integer> getInvalidSteps() {
+		
 		List<Integer> badSteps = new ArrayList<Integer>();
 		List<ArmConfig> path = ps.getPath();
 		ArmConfig state = path.get(0);
@@ -173,6 +175,25 @@ public class Tester {
 			state = nextState;
 		}
 		return badSteps;
+	}
+	
+	/**
+	 * returns first bad step in a path
+	 * 
+	 * @return first invalid step or -1 if there are no invalid steps
+	 * 
+	 */
+	public int getFirstInvalidStep(){
+		List<ArmConfig> path = ps.getPath();
+		ArmConfig state = path.get(0);
+		for (int i = 1; i < path.size(); i++) {
+			ArmConfig nextState = path.get(i);
+			if (!isValidStep(state, nextState)) {
+				 return i - 1;
+			}
+			state = nextState;
+		}
+		return -1;
 	}
 	
 	/**
@@ -201,7 +222,7 @@ public class Tester {
 //			return false;
 //		}
 //		return true;
-//		
+		
 
 	}
 	
@@ -478,6 +499,57 @@ public class Tester {
 	}
 	
 	/**
+	 * Returns whether the base & end position path between two configurations collides with a given obstacle
+	 * 
+	 * @param cfg1, cgf2
+	 *            the two configurations to test path between.
+	 * @param obstacles
+	 *            the obstacles to test against.
+	 * @return whether the path between cfg1 & cfg2 (bases) collides with the obstacle o 
+	 * 
+	 */
+	public boolean pathCollisionAllCfg(ArmConfig cfg1, ArmConfig cfg2, List<Obstacle> obstacles) {
+		
+		int numSteps = 10;
+		
+		
+		Line2D path = new Line2D.Double(cfg1.getBase(), cfg2.getBase());	//path from base to base
+		
+		//path from end to end
+		int numJoints = cfg1.getJointCount();
+		Point2D end1 = cfg1.getLinks().get(numJoints -1).getP1();
+		Point2D end2 = cfg2.getLinks().get(numJoints -1).getP1();
+		Line2D endPath = new Line2D.Double(end1, end2);
+//		
+//		Point2D b1 = cfg1.getBase();
+//		Point2D b2 = cfg2.getBase();
+//		
+//		double dx1 = (end1.getX() - b1.getX())/numSteps;
+//		double dy1 = (end1.getY() - b1.getY())/numSteps;
+//		double dx2 = (end2.getX() - b2.getX())/numSteps;
+//		double dy2 = (end2.getY() - b2.getY())/numSteps;
+		
+		for (Obstacle o : obstacles) {
+			Rectangle2D lenientRect = grow(o.getRect(), -maxError);
+			if (path.intersects(lenientRect) || endPath.intersects(lenientRect) || path.intersectsLine(endPath)) {
+				return true;
+			}
+			
+//			// check rhombus to end points	--								NOTE ONLY HAVE TO DO THIS IF HAVE OBSTACLES SMALLER THAN BOUNDING OF A CFG 
+//			for (int i = 0; i < numSteps; i++){
+//				Point2D pt1 = new Point2D.Double(b1.getX() + dx1, b1.getY() + dy1);
+//				Point2D pt2 = new Point2D.Double(b2.getX() + dx2, b2.getY() + dy2);
+//				Line2D pathEnd = new Line2D.Double(pt1, pt2);
+//				if(pathEnd.intersects(lenientRect)) {
+//					return true;
+//				}
+//			}
+		
+		}
+		return false;	
+	}
+	
+	/**
 	 * Returns whether the base position path between two configurations collides with a given obstacle
 	 * 
 	 * @param cfg1, cgf2
@@ -489,13 +561,17 @@ public class Tester {
 	 */
 	public boolean pathCollision(ArmConfig cfg1, ArmConfig cfg2, List<Obstacle> obstacles) {
 		
-		Line2D path = new Line2D.Double(cfg1.getBase(), cfg2.getBase());
+		int numSteps = 10;
+		
+		
+		Line2D path = new Line2D.Double(cfg1.getBase(), cfg2.getBase());	//path from base to base
+		
 		
 		for (Obstacle o : obstacles) {
 			Rectangle2D lenientRect = grow(o.getRect(), -maxError);
 			if (path.intersects(lenientRect)) {
 				return true;
-			}
+			}		
 		}
 		return false;	
 	}

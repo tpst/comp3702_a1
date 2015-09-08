@@ -40,18 +40,19 @@ public class path_planner {
 		ArrayList<ArmConfig> path = RRTLoop(problem.getInitialState(), problem.getGoalState(), tests);
 		
 //		//Smooth Path - create shortcuts between nodes if possible
-//		if(problem.getPath().size() > 3) {
-//		path = smoothPath(path);
-//		}
-
+		if(path.size() > 3) {
+		path = smoothPath(path, tests);
+		}
 		
-		//Now have Path from initial to Goal 
-		// Need to Break Path down to appropriate step sizes
-//		completePath(problem);
+		int size = path.size();
+		double jDiff = calcTotJointDiff(path);
+		
 		
 		System.out.println("Completing Path - Interpolation");
-		completePath(path, tests);
+		path = interpolatePathFull(tests, path);
+//		path = completePath(path, tests);
 		  
+		problem.setPath(path);
 		//Output 
 		try {
 			problem.saveSolution(args[1]);
@@ -59,6 +60,14 @@ public class path_planner {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+
+		
+		
+		System.out.print("Path size smooth ");
+		System.out.println(size);
+		System.out.print("Joint diff");
+		System.out.println(jDiff);
 		
 		System.out.println("Challenge Complete");
 	}
@@ -72,17 +81,13 @@ public class path_planner {
 	 * 		Problem Spec object containing problem
 	 */
 	public static ArrayList<ArmConfig> RRTLoop(ArmConfig initState, ArmConfig goalState, Tester tests, Rectangle2D bounds) {
-		boolean completedPath = false; //has a complete path been found
+//		boolean completedPath = false; //has a complete path been found
 		int numSamples = 10;
-	
-		
-		List<Obstacle> obstacles = tests.ps.getObstacles();
-		
 
-		
+		List<Obstacle> obstacles = tests.ps.getObstacles();
+
 		Tree tree = new Tree();
-		
-		
+
 		//initial state base
 		Point2D initBase = initState.getBase();
 		
@@ -92,8 +97,23 @@ public class path_planner {
 		//Add initial config to tree
 		new TreeNode(tree, null, initState);
 			
-		while(!completedPath){
-			
+		while(true){
+
+			for(int i = 0; i < numSamples; i++) {
+				// get a random coordinate
+				ArmConfig sample = getValidSampleCfg(tests, bounds);
+//					ArmConfig sample = getValidSampleCfg(tests);
+
+				//nearest Node in Tree to sample
+				TreeNode parent = tree.nearestNeighbour(sample);
+				
+				// Check No Collision 
+				if(!tests.pathCollisionAllCfg(parent.getConfig(), sample, obstacles)) {
+					//No Collision add to tree
+					new TreeNode(tree, parent, sample);						
+//					System.out.println("Added New Node");
+				}			
+			}
 			//Try Connect Goal State 
 			TreeNode parent = tree.nearestNeighbour(goalState);
 			if (!tests.pathCollision(parent.getConfig(), goalState, obstacles)) {
@@ -101,34 +121,15 @@ public class path_planner {
 
 				//add to tree
 				TreeNode goal = new TreeNode(tree, parent, goalState);
-				
-
-				
-				completedPath = true;	
+	
+//				completedPath = true;	
 				System.out.println("Goal State Connected");
-				
-				
+
 				//Retrieve path back to Initial Config
 				return (ArrayList<ArmConfig>) goal.getPath();	
 			}
-			
-				for(int i = 0; i < numSamples; i++) {
-					// get a random coordinate
-					ArmConfig sample = getValidSampleCfg(tests, bounds);
-//					ArmConfig sample = getValidSampleCfg(tests);
-	
-					//nearest Node in Tree to sample
-					parent = tree.nearestNeighbour(sample);
-					
-					// Check No Collision 
-					if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
-						//No Collision add to tree
-						new TreeNode(tree, parent, sample);						
-						System.out.println("Added New Node");
-					}			
-				}
 		}
-		return null;
+//		return null;
 	}
 	
 	/**
@@ -141,15 +142,13 @@ public class path_planner {
 	 */
 	public static ArrayList<ArmConfig> RRTLoop(ArmConfig initState, ArmConfig goalState, Tester tests) {
 		boolean completedPath = false; //has a complete path been found
-		int numSamples = 10;
+		int numSamples = 50;
 		double sqrSideLen = 0.1;
 		boolean incSample = true;	//increase sampling bounding box
 		Rectangle2D bounds = new Rectangle2D.Double();
 		
 		List<Obstacle> obstacles = tests.ps.getObstacles();
-		
 
-		
 		Tree tree = new Tree();
 		
 		
@@ -162,18 +161,16 @@ public class path_planner {
 		//Add initial config to tree
 		new TreeNode(tree, null, initState);
 			
-		while(!completedPath){
+		while(true){
 			
 			//Try Connect Goal State 
 			TreeNode parent = tree.nearestNeighbour(goalState);
-			if (!tests.pathCollision(parent.getConfig(), goalState, obstacles)) {
+			if (!tests.pathCollisionAllCfg(parent.getConfig(), goalState, obstacles)) {
 				//Goal State Connected
 
 				//add to tree
 				TreeNode goal = new TreeNode(tree, parent, goalState);
-				
 
-				
 				completedPath = true;	
 				System.out.println("Goal State Connected");
 				
@@ -212,13 +209,12 @@ public class path_planner {
 					if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
 						//No Collision add to tree
 						new TreeNode(tree, parent, sample);						
-						System.out.println("Added New Node");
+//						System.out.println("Added New Node");
 					}			
 				}
 //			}
 //			incSample = false;
 		}
-		return null;
 	}
 	
 	
@@ -385,8 +381,8 @@ public class path_planner {
 			
 			if (tests.isValidConfig(cfg)) {
 				return cfg;
-			} else {
-				System.out.println("Invalid Sample");
+//			} else {
+//				System.out.println("Invalid Sample");
 			}
 		}	
 	}
@@ -409,8 +405,8 @@ public class path_planner {
 			
 			if (tests.isValidConfig(cfg)) {
 				return cfg;
-			} else {
-				System.out.println("Invalid Sample");
+//			} else {
+//				System.out.println("Invalid Sample");
 			}
 		}	
 	}
@@ -456,13 +452,16 @@ public class path_planner {
 		int origSize = path.size();
 		
 		while (updating) {
+			if(path.size() == 2) {
+				break;
+			}
 			//Start at initial position
 			for (int i = 0; i < path.size() - 2; i ++) {
 				
 				//set updating false
 				updating = false;
 				
-				if(!tests.pathCollision(path.get(i), path.get(i+2), o)){
+				if(!tests.pathCollisionAllCfg(path.get(i), path.get(i+2), o)){
 					//no collision
 					//remove middle node
 					path.remove(i+1);
@@ -483,14 +482,13 @@ public class path_planner {
 	 * and max joint rotation is <= 0.1 degrees.
 	 */
 	public static ArrayList<ArmConfig> interpolatePath(Tester tests, ArrayList<ArmConfig> path) {
-
-		List<Integer> badSteps = tests.getInvalidSteps();
 		tests.ps.setPath(path);
-//		while(badSteps.size()>0) {
-			
-			System.out.print("BadSteps: ");
-			System.out.println(badSteps.size());
+		List<Integer> badSteps = tests.getInvalidSteps();
+				
+		int tmp = 0;
 		
+//		while(badSteps.size()>0) {
+
 			int addIdx = 0;
 	
 			for (Integer i : badSteps) {
@@ -502,42 +500,118 @@ public class path_planner {
 				ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
 				
 				//number of steps required
-				int numSteps = getNumSteps(dist, jointAngleDifferences, tests);
-//				int numSteps = 2;
+//				int numSteps = getNumSteps(dist, jointAngleDifferences, tests);
+				int numSteps = 2;
 				
 				//step distance
 				double dx = (cfg2.getBase().getX() - cfg1.getBase().getX())/numSteps;
 				double dy = (cfg2.getBase().getY() - cfg1.getBase().getY())/numSteps;
 				ArrayList<Double> jointIncs = calcJointStep (jointAngleDifferences, numSteps);
 				
+			ArmConfig prevCfg = new ArmConfig(cfg1);	
+			int prevSize = path.size();
+			
 			for (int j = 1; j < numSteps; j ++) {	
-			ArmConfig newCfg = new ArmConfig(path.get(addIdx+i+j-1));
+			ArmConfig newCfg = new ArmConfig(prevCfg);
+			newCfg.addIncrement(dx, dy, jointIncs);
+			
+			//check cfg is valid
+//			if(!tests.isValidConfig(newCfg)) {
+////				System.out.println("Config not valid");
+//				//not valid get a valid config
+//				newCfg = getPathConfig(newCfg.getBase(), prevCfg, tests);
+//			}
+			
+			if(tests.isValidConfig(newCfg)) {
+				path.add(addIdx+i+1, newCfg);
+				addIdx +=1;
+			}
+			
+				
+			prevCfg = newCfg;
+		}
+		
+//		addIdx +=path.size()-prevSize;	//Increase the Idex Counter
+	}
+
+			//update badSteps
+			tests.ps.setPath(path);
+			badSteps = tests.getInvalidSteps();
+				
+			System.out.print(" interp2 BadSteps: ");
+			System.out.println(badSteps.size());
+//			System.out.println(badSteps);
+			System.out.print("path size ");
+			System.out.println(path.size());
+//		}	
+			return path;	
+	}
+	
+	
+	/*
+	 * Takes the current solution path and corrects it such that base movement is <= 0.001 per step, 
+	 * and max joint rotation is <= 0.1 degrees.
+	 */
+	public static ArrayList<ArmConfig> interpolatePathFull(Tester tests, ArrayList<ArmConfig> path) {
+		tests.ps.setPath(path);
+		List<Integer> badSteps = tests.getInvalidSteps();
+
+		while(badSteps.size()>0) {
+
+			int addIdx = 0;
+	
+			for (Integer i : badSteps) {
+				
+				ArmConfig cfg1 = path.get(i + addIdx);
+				ArmConfig cfg2 = path.get(i+1 + addIdx);
+							
+				double dist = cfg1.getBase().distance(cfg2.getBase());
+				ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
+				
+				//number of steps required
+//				int numSteps = getNumSteps(dist, jointAngleDifferences, tests);
+				int numSteps = 2;
+				
+				//step distance
+				double dx = (cfg2.getBase().getX() - cfg1.getBase().getX())/numSteps;
+				double dy = (cfg2.getBase().getY() - cfg1.getBase().getY())/numSteps;
+				ArrayList<Double> jointIncs = calcJointStep (jointAngleDifferences, numSteps);
+				
+			ArmConfig prevCfg = new ArmConfig(cfg1);	
+			int prevSize = path.size();
+			
+			for (int j = 1; j < numSteps; j ++) {	
+			ArmConfig newCfg = new ArmConfig(prevCfg);
 			newCfg.addIncrement(dx, dy, jointIncs);
 			
 			//check cfg is valid
 			if(!tests.isValidConfig(newCfg)) {
 //				System.out.println("Config not valid");
 				//not valid get a valid config
-				newCfg = getPathConfig(newCfg.getBase(), path.get(addIdx+j-1), tests);
+				newCfg = getPathConfig(newCfg.getBase(), prevCfg, tests);
 			}
-			path.add(addIdx+i+j, newCfg);
-		}
+
+				path.add(addIdx+i+1, newCfg);
+				addIdx +=1;
 		
-		addIdx +=numSteps-1;	//Increase the Idex Counter
+			prevCfg = newCfg;
+		}
 	}
-			
-	tests.ps.setPath(path);
+
 			//update badSteps
+			tests.ps.setPath(path);
 			badSteps = tests.getInvalidSteps();
-//		}		
-			System.out.print("BadSteps: ");
+				
+			System.out.print(" interp2 BadSteps: ");
 			System.out.println(badSteps.size());
-			
-			return path;
-			
+//			System.out.println(badSteps);
+			System.out.print("path size ");
+			System.out.println(path.size());
+		}	
+			return path;	
 	}
 	
-	public static void completePath(ArrayList<ArmConfig> path, Tester tests) {
+	public static ArrayList<ArmConfig> completePath(ArrayList<ArmConfig> path, Tester tests) {
 		
 		tests.ps.setPath(path);
 		
@@ -545,37 +619,44 @@ public class path_planner {
 		path = interpolatePath(tests, path);
 		tests.ps.setPath(path);
 		//now will have a few bad steps
-		List<Integer> badSteps = tests.getInvalidSteps();
-		int addIdex = 0;
-		for(Integer i : badSteps) {
-			ArmConfig cfgInit = path.get(i+addIdex);
-			ArmConfig cfgGoal = path.get(i+addIdex+1);
+		int badStep = tests.getFirstInvalidStep();
+	
+		while(badStep >= 0) {
 			
 			
-			//perform RRT between two points
-				//setBounding for sample points
-			
-			Rectangle2D bounds = getBoundingRect(cfgInit.getBase(), cfgGoal.getBase(), 0.001);
-			ArrayList<ArmConfig> miniPath = RRTLoop(cfgInit, cfgGoal, tests, bounds);
-			//interpolate this path
-			interpolatePath(tests, miniPath);
-			//repeat until no more bad steps
-			
-			tests.ps.setPath(miniPath);
-			System.out.print("miniPath BadSteps - ");
-			System.out.println(tests.getInvalidSteps());
-			
-
-			//MiniPath now correct add into actual path
-			for(int j = 0; j < miniPath.size()-1; j++) {
-				path.add(i+addIdex+j+1, miniPath.get(j));
+				ArmConfig cfgInit = path.get(badStep);
+				ArmConfig cfgGoal = path.get(badStep+1);
 				
-			}
-			
-			addIdex += miniPath.size();
-		}
+				
+				//perform RRT between two points
+					//setBounding for sample points
+				
+				Rectangle2D bounds = getBoundingRect(cfgInit.getBase(), cfgGoal.getBase(), 0.01);
+				ArrayList<ArmConfig> miniPath = RRTLoop(cfgInit, cfgGoal, tests, bounds);
+				
+				if(miniPath.size() > 3) {
+					miniPath = smoothPath(miniPath, tests);
+				}
+				//interpolate this path
+				miniPath = interpolatePathFull(tests, miniPath);
+				//repeat until no more bad steps
+				
+				tests.ps.setPath(miniPath);
+				System.out.print("miniPath BadSteps - ");
+				System.out.println(tests.getInvalidSteps().size());
+	
+				//MiniPath now correct add into actual path
+				for(int j = 1; j < miniPath.size()-2; j++) {
+					path.add(badStep+j, miniPath.get(j));
+				}
 
+			tests.ps.setPath(path);
+			badStep = tests.getFirstInvalidStep();		
+		}
 		
+		System.out.println("Path complete");
+
+		return path;
 		
 	}
 	
@@ -613,17 +694,20 @@ public class path_planner {
 	 */
 	public static ArmConfig getPathConfig(Point2D base, ArmConfig prevCfg, Tester tests) {
 		List<ArmConfig> samples = new ArrayList<ArmConfig>();
-		int numSamples = 10;
+		int numSamples = 15;
 		int numJoints = tests.ps.getJointCount();
-		double sqrSideLen = 0.1;
+		double sqrSideLen = 0.01;
+		//growing sample bounds
+		int itTilGrow = 5;
+		double growDelta = 0.001;
 		
 		Rectangle2D bounds = getBoundingRect(base, sqrSideLen);
 			
-		//sample configs
+		//sample configs - try for the correct base
 		for(int i = 0; i < numSamples; i ++) {
 			//get valid sample
 			
-			ArmConfig cfg = getSampleConfig(numJoints, bounds);
+			ArmConfig cfg = getSampleConfig(numJoints, base);
 			if (tests.isValidConfig(cfg)) {
 				samples.add(cfg);
 //			} else {
@@ -631,12 +715,18 @@ public class path_planner {
 			}
 		}
 			
+		int iter = 0;
 		while(samples.size() == 0){
-			//repeat untill have atleast one valid config
+			//repeat until have at least one valid config
+			//increase bounding box
+			if(iter % itTilGrow ==0) {
+				bounds = Tester.grow(bounds, growDelta*(iter/itTilGrow));
+			}
 			ArmConfig cfg = getSampleConfig(numJoints, bounds);
 			if (tests.isValidConfig(cfg)) {
 				samples.add(cfg);
 			}
+			iter +=1;
 		}
 		
 		
@@ -716,6 +806,25 @@ public class path_planner {
 	
 	
 
+	public static double calcTotJointDiff(ArrayList<ArmConfig> path) {
+		
+		double totDiff = 0;
+		
+		ArmConfig cfg = path.get(0);
+		for(int i = 1; i <path.size(); i ++) {
+			ArmConfig nextCfg = path.get(i);
+			
+			ArrayList<Double> diffs = calcDeltaJoints(cfg, nextCfg);
+			
+			for(Double d : diffs) {
+				totDiff+= Math.abs(d);
+			}
+			
+			cfg = nextCfg;
+		}
+		
+		return totDiff;
+	}
 	
 	
 //	/**
