@@ -31,14 +31,17 @@ public class path_planner {
 			e.printStackTrace();
 		}
 		
+		Tester tests = new Tester();
+		tests.ps = problem;
+		
 		//construct new empty search tree using root node
 		
 		// do rrt while we have not found goal
-		RRTLoop(problem);
+		ArrayList<ArmConfig> path = RRTLoop(problem.getInitialState(), problem.getGoalState(), tests);
 		
 //		//Smooth Path - create shortcuts between nodes if possible
 //		if(problem.getPath().size() > 3) {
-//			smoothPath(problem);
+//		path = smoothPath(path);
 //		}
 
 		
@@ -47,7 +50,7 @@ public class path_planner {
 //		completePath(problem);
 		
 		System.out.println("Completing Path - Interpolation");
-		correctPath(problem);
+		completePath(path, tests);
 		  
 		//Output 
 		try {
@@ -60,7 +63,6 @@ public class path_planner {
 		System.out.println("Challenge Complete");
 	}
 	
-	
 	/**
 	 * Rapidly Exploring Random Tree
 	 * 
@@ -69,69 +71,51 @@ public class path_planner {
 	 * @param problem
 	 * 		Problem Spec object containing problem
 	 */
-	public static void RRTLoop(ProblemSpec problem) {
+	public static ArrayList<ArmConfig> RRTLoop(ArmConfig initState, ArmConfig goalState, Tester tests, Rectangle2D bounds) {
 		boolean completedPath = false; //has a complete path been found
-		int numSamples = 100;
-		double sqrSideLen = 0.1;
-		boolean incSample = true;	//increase sampling bounding box
-		Rectangle2D bounds = new Rectangle2D.Double();
+		int numSamples = 10;
+	
 		
-		List<Obstacle> obstacles = problem.getObstacles();
+		List<Obstacle> obstacles = tests.ps.getObstacles();
 		
-		Tester tests = new Tester();
-		tests.ps = problem;
+
+		
 		Tree tree = new Tree();
 		
 		
 		//initial state base
-		Point2D initBase = problem.getInitialState().getBase();
+		Point2D initBase = initState.getBase();
 		
 		System.out.println("Finding Tree");
 		
 		
 		//Add initial config to tree
-		new TreeNode(tree, null, problem.getInitialState());
+		new TreeNode(tree, null, initState);
 			
 		while(!completedPath){
 			
 			//Try Connect Goal State 
-			TreeNode parent = tree.nearestNeighbour(problem.getGoalState());
-			if (!tests.pathCollision(parent.getConfig(), problem.getGoalState(), obstacles)) {
+			TreeNode parent = tree.nearestNeighbour(goalState);
+			if (!tests.pathCollision(parent.getConfig(), goalState, obstacles)) {
 				//Goal State Connected
 
 				//add to tree
-				TreeNode goal = new TreeNode(tree, parent, problem.getGoalState());
+				TreeNode goal = new TreeNode(tree, parent, goalState);
 				
-				//Retrieve path back to Initial Config
-				problem.setPath(goal.getPath());
+
 				
 				completedPath = true;	
 				System.out.println("Goal State Connected");
 				
 				
-				//save tree to plot in matlab																NOT REQURED TEST ONLY
-				try {
-					tree.getMatlabTree();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				break;
+				//Retrieve path back to Initial Config
+				return (ArrayList<ArmConfig>) goal.getPath();	
 			}
 			
-			for(int k = 1; k <= 2/sqrSideLen; k ++) {
-				//increment a bounding box to sample configs
-				if (incSample) {
-					bounds = getBoundingRect(initBase, sqrSideLen*k);
-				} else {
-					//default bounds 
-					bounds = tests.BOUNDS;
-					System.out.println("default bounds");
-				}
-
-				for(int i = 0; i < k*numSamples; i++) {
+				for(int i = 0; i < numSamples; i++) {
 					// get a random coordinate
-					ArmConfig sample = getValidSampleCfg(tests, bounds);					
+					ArmConfig sample = getValidSampleCfg(tests, bounds);
+//					ArmConfig sample = getValidSampleCfg(tests);
 	
 					//nearest Node in Tree to sample
 					parent = tree.nearestNeighbour(sample);
@@ -143,9 +127,98 @@ public class path_planner {
 						System.out.println("Added New Node");
 					}			
 				}
-			}
-			incSample = false;
 		}
+		return null;
+	}
+	
+	/**
+	 * Rapidly Exploring Random Tree
+	 * 
+	 * Finds a path between initial and goal state
+	 * 
+	 * @param problem
+	 * 		Problem Spec object containing problem
+	 */
+	public static ArrayList<ArmConfig> RRTLoop(ArmConfig initState, ArmConfig goalState, Tester tests) {
+		boolean completedPath = false; //has a complete path been found
+		int numSamples = 10;
+		double sqrSideLen = 0.1;
+		boolean incSample = true;	//increase sampling bounding box
+		Rectangle2D bounds = new Rectangle2D.Double();
+		
+		List<Obstacle> obstacles = tests.ps.getObstacles();
+		
+
+		
+		Tree tree = new Tree();
+		
+		
+		//initial state base
+		Point2D initBase = initState.getBase();
+		
+		System.out.println("Finding Tree");
+		
+		
+		//Add initial config to tree
+		new TreeNode(tree, null, initState);
+			
+		while(!completedPath){
+			
+			//Try Connect Goal State 
+			TreeNode parent = tree.nearestNeighbour(goalState);
+			if (!tests.pathCollision(parent.getConfig(), goalState, obstacles)) {
+				//Goal State Connected
+
+				//add to tree
+				TreeNode goal = new TreeNode(tree, parent, goalState);
+				
+
+				
+				completedPath = true;	
+				System.out.println("Goal State Connected");
+				
+				
+//				//save tree to plot in matlab																NOT REQURED TEST ONLY
+//				try {
+//					tree.getMatlabTree();
+//				} catch (IOException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+				
+				//Retrieve path back to Initial Config
+				return (ArrayList<ArmConfig>) goal.getPath();	
+			}
+			
+//			for(int k = 1; k <= 2/sqrSideLen; k ++) {
+//				//increment a bounding box to sample configs
+//				if (incSample) {
+//					bounds = getBoundingRect(initBase, sqrSideLen*k);
+//				} else {
+//					//default bounds 
+//					bounds = tests.BOUNDS;
+//					System.out.println("default bounds");
+//				}
+
+				for(int i = 0; i < numSamples; i++) {
+					// get a random coordinate
+//					ArmConfig sample = getValidSampleCfg(tests, bounds);
+					ArmConfig sample = getValidSampleCfg(tests);
+	
+					//nearest Node in Tree to sample
+					parent = tree.nearestNeighbour(sample);
+					
+					// Check No Collision 
+					if(!tests.pathCollision(parent.getConfig(), sample, obstacles)) {
+						//No Collision add to tree
+						new TreeNode(tree, parent, sample);						
+						System.out.println("Added New Node");
+					}			
+				}
+//			}
+//			incSample = false;
+		}
+		return null;
 	}
 	
 	
@@ -175,6 +248,33 @@ public class path_planner {
 		if(y_top > 1) y_top = 1;
 		
 		return new Rectangle2D.Double(x_left, y_bot, x_right-x_left, y_top-y_bot);
+	
+	}
+	
+	/**
+	 * Returns a bounding rect given 2 corner points
+	 * @param crn1
+	 * 			one corner of the bounding box
+	 * @param crn2
+	 * 			second corner of bounding box
+	 * @param grow
+	 * 			grow size for rect
+	 * @return
+	 * 			bounding box from crn1 to crn2
+	 */
+	public static Rectangle2D getBoundingRect(Point2D crn1, Point2D crn2, double grow) {
+				
+		double x1 = crn1.getX();
+		double x2 = crn2.getX();
+		double y1 = crn1.getY();
+		double y2 = crn2.getY();
+		
+		double w = Math.abs(x1-x2);
+		double h = Math.abs(y1-y2);
+		
+		Rectangle2D rect = new Rectangle2D.Double(Math.min(x1, x2), Math.min(y1, y2), w, h);
+		
+		return Tester.grow(rect, grow);
 	
 	}
 	/*
@@ -346,12 +446,11 @@ public class path_planner {
 	 * @param problem
 	 * 
 	 */
-	public static void smoothPath(ProblemSpec problem) {
+	public static ArrayList<ArmConfig> smoothPath(ArrayList<ArmConfig> path, Tester tests) {
 		
-		ArrayList<ArmConfig> path = (ArrayList<ArmConfig>) problem.getPath();
-		List<Obstacle> o = problem.getObstacles();
+		List<Obstacle> o = tests.ps.getObstacles();
 		boolean updating = true;
-		Tester tests = new Tester();
+		
 		
 		System.out.println("Smoothing Path");
 		int origSize = path.size();
@@ -375,21 +474,19 @@ public class path_planner {
 				}
 			}
 		}
-		//Update solution
-		problem.setPath(path);		
+		//Return new path
+		return path;
 	}
 	
 	/*
 	 * Takes the current solution path and corrects it such that base movement is <= 0.001 per step, 
 	 * and max joint rotation is <= 0.1 degrees.
 	 */
-	public static void correctPath(ProblemSpec problem) {
-		ArrayList<ArmConfig> path = (ArrayList<ArmConfig>)problem.getPath();
-		Tester tests = new Tester();
-		tests.ps = problem;
+	public static ArrayList<ArmConfig> interpolatePath(Tester tests, ArrayList<ArmConfig> path) {
 
 		List<Integer> badSteps = tests.getInvalidSteps();
-		while(badSteps.size()>0) {
+		tests.ps.setPath(path);
+//		while(badSteps.size()>0) {
 			
 			System.out.print("BadSteps: ");
 			System.out.println(badSteps.size());
@@ -405,16 +502,14 @@ public class path_planner {
 				ArrayList<Double> jointAngleDifferences = calcDeltaJoints(cfg1, cfg2);
 				
 				//number of steps required
-//				int numSteps = getNumSteps(dist, jointAngleDifferences, tests);
-				int numSteps = 2;
+				int numSteps = getNumSteps(dist, jointAngleDifferences, tests);
+//				int numSteps = 2;
 				
 				//step distance
 				double dx = (cfg2.getBase().getX() - cfg1.getBase().getX())/numSteps;
 				double dy = (cfg2.getBase().getY() - cfg1.getBase().getY())/numSteps;
 				ArrayList<Double> jointIncs = calcJointStep (jointAngleDifferences, numSteps);
 				
-			
-		
 			for (int j = 1; j < numSteps; j ++) {	
 			ArmConfig newCfg = new ArmConfig(path.get(addIdx+i+j-1));
 			newCfg.addIncrement(dx, dy, jointIncs);
@@ -430,13 +525,58 @@ public class path_planner {
 		
 		addIdx +=numSteps-1;	//Increase the Idex Counter
 	}
-	problem.setPath(path);
+			
+	tests.ps.setPath(path);
 			//update badSteps
 			badSteps = tests.getInvalidSteps();
-		}		
+//		}		
 			System.out.print("BadSteps: ");
 			System.out.println(badSteps.size());
 			
+			return path;
+			
+	}
+	
+	public static void completePath(ArrayList<ArmConfig> path, Tester tests) {
+		
+		tests.ps.setPath(path);
+		
+		//interpolate path
+		path = interpolatePath(tests, path);
+		tests.ps.setPath(path);
+		//now will have a few bad steps
+		List<Integer> badSteps = tests.getInvalidSteps();
+		int addIdex = 0;
+		for(Integer i : badSteps) {
+			ArmConfig cfgInit = path.get(i+addIdex);
+			ArmConfig cfgGoal = path.get(i+addIdex+1);
+			
+			
+			//perform RRT between two points
+				//setBounding for sample points
+			
+			Rectangle2D bounds = getBoundingRect(cfgInit.getBase(), cfgGoal.getBase(), 0.001);
+			ArrayList<ArmConfig> miniPath = RRTLoop(cfgInit, cfgGoal, tests, bounds);
+			//interpolate this path
+			interpolatePath(tests, miniPath);
+			//repeat until no more bad steps
+			
+			tests.ps.setPath(miniPath);
+			System.out.print("miniPath BadSteps - ");
+			System.out.println(tests.getInvalidSteps());
+			
+
+			//MiniPath now correct add into actual path
+			for(int j = 0; j < miniPath.size()-1; j++) {
+				path.add(i+addIdex+j+1, miniPath.get(j));
+				
+			}
+			
+			addIdex += miniPath.size();
+		}
+
+		
+		
 	}
 	
 	/**
@@ -475,11 +615,15 @@ public class path_planner {
 		List<ArmConfig> samples = new ArrayList<ArmConfig>();
 		int numSamples = 10;
 		int numJoints = tests.ps.getJointCount();
+		double sqrSideLen = 0.1;
+		
+		Rectangle2D bounds = getBoundingRect(base, sqrSideLen);
 			
 		//sample configs
 		for(int i = 0; i < numSamples; i ++) {
 			//get valid sample
-			ArmConfig cfg = getSampleConfig(numJoints, base);
+			
+			ArmConfig cfg = getSampleConfig(numJoints, bounds);
 			if (tests.isValidConfig(cfg)) {
 				samples.add(cfg);
 //			} else {
@@ -489,7 +633,7 @@ public class path_planner {
 			
 		while(samples.size() == 0){
 			//repeat untill have atleast one valid config
-			ArmConfig cfg = getSampleConfig(numJoints, base);
+			ArmConfig cfg = getSampleConfig(numJoints, bounds);
 			if (tests.isValidConfig(cfg)) {
 				samples.add(cfg);
 			}
